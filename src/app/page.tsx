@@ -1,101 +1,174 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useState } from "react";
+
+export default function LangflowPage() {
+  const [inputValue, setInputValue] = useState("");
+  const [responseMessage, setResponseMessage] = useState("");
+  const [insight, setInsight] = useState<string[]>([
+    
+  ]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  function parseToJsonObject(inputString: string) {
+    try {
+      // Replace single quotes with double quotes
+      const jsonString = inputString
+        .replace(/'/g, '"') // Replace all single quotes with double quotes
+        .replace(/,\s*}/g, '}') // Remove trailing commas before closing braces
+        .replace(/,\s*]/g, ']'); // Remove trailing commas before closing brackets
+
+      // Parse the corrected string into a JSON object
+      const jsonObject = JSON.parse(jsonString);
+      return jsonObject;
+    } catch (error: any) {
+      console.error("Invalid input format:", error.message);
+      return null; // Return null if parsing fails
+    }
+  }
+
+  const getRandomStrings = (arr: string[]): string[] => {
+    const result: string[] = [];
+    const arrCopy = [...arr]; // Create a shallow copy of the array
+  
+    // Select 3 random strings
+    for (let i = 0; i < 3; i++) {
+      const randomIndex = Math.floor(Math.random() * arrCopy.length);
+      result.push(arrCopy[randomIndex]);
+      arrCopy.splice(randomIndex, 1); // Remove the selected item to avoid duplicates
+    }
+  
+    return result;
+  };
+
+  const handleRequest = async () => {
+    setLoading(true);
+    setError("");
+    setResponseMessage("");
+
+    try {
+      const response = await fetch("/api/langflow", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ inputValue }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP Error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const flowOutputs = data.outputs?.[0];
+      const firstComponentOutputs = flowOutputs?.outputs?.[0];
+      const output = firstComponentOutputs?.outputs?.message;
+      const result = output.message.text;
+      const final_result = result.split("$$$")
+      const avg = parseToJsonObject(final_result[0])
+      const postData = parseToJsonObject(final_result[1])
+      console.log(avg);
+      console.log(postData);
+      setResponseMessage(result);
+    } catch (err: any) {
+      console.error("Error:", err.message);
+      setError(err.message || "An error occurred");
+    } finally {
+      setLoading(false);
+    }
+
+  };
+
+  const handleInsightRequest = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await fetch("/api/insights", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP Error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const flowOutputs = data.outputs?.[0];
+      const firstComponentOutputs = flowOutputs?.outputs?.[0];
+      const output = firstComponentOutputs?.outputs?.message;
+      const result = output.message.text;
+      const final_result = JSON.parse(result);
+      const random_insights = getRandomStrings(final_result)
+      console.log(JSON.parse(result));
+      
+      setInsight(random_insights);
+
+    } catch (err: any) {
+      console.error("Error:", err.message);
+      setError(err.message || "An error occurred");
+    } finally {
+      setLoading(false);
+    }
+
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
+    <div>
+      <div className="p-6 rounded-xl shadow-md space-y-4 m-4">
+        <h1 className="text-xl font-bold">Level Supermind Hackathon</h1>
+        <input
+          type="text"
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          placeholder="Enter your input"
+          className="w-full p-2 border border-gray-300 rounded-md"
         />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
+        <button
+          onClick={handleRequest}
+          disabled={loading || !inputValue}
+          className={`w-full p-2 mt-2 rounded-md ${loading
+            ? "bg-gray-400 cursor-not-allowed"
+            : "bg-blue-500 hover:bg-blue-600 text-white"
+            }`}
+        >
+          {loading ? "Sending..." : "Send Request"}
+        </button>
+        {responseMessage && (
+          <div className="p-4 bg-green-100 text-green-800 rounded-md">
+            {responseMessage}
+          </div>
+        )}
+        {error && (
+          <div className="p-4 bg-red-100 text-red-800 rounded-md">
+            {error}
+          </div>
+        )}
+      </div>
+      <div className="p-6 rounded-xl shadow-md space-y-4 m-4">
+        <h1 className="text-xl font-bold">Insights</h1>
+        <button
+          onClick={handleInsightRequest}
+          disabled={loading}
+          className={`w-full p-2 mt-2 rounded-md ${loading
+            ? "bg-gray-400 cursor-not-allowed"
+            : "bg-blue-500 hover:bg-blue-600 text-white"
+            }`}
+        >
+          {loading ? "Generating..." : "Generate insights"}
+        </button>
+        <ol className="list-decimal">
+          {insight && insight.map((insight, index) => (
+            <li key={index} style={{ marginBottom: "10px" }}>
+              {insight}
+            </li>
+          ))}
         </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        {error && (
+          <div className="p-4 bg-red-100 text-red-800 rounded-md">
+            {error}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
