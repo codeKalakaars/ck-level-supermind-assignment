@@ -3,7 +3,7 @@ import { LangflowClient } from "@/lib/langflowClient";
 
 export async function POST(req: Request) {
     const body = await req.json();
-    const { inputValue, tweaks = {} } = body;
+    const {tweaks = {} } = body;
 
     const flowId = "56ca5663-9ae2-4853-a754-e0848aa65ce1";
     const langflowId = "1f10f8e7-6cf0-49ac-b6f5-a5c104670e55";
