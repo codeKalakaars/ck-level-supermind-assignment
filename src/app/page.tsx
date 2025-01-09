@@ -70,7 +70,7 @@ export default function LangflowPage() {
     return result;
   };
 
-  const handleRequest = async () => {
+  const handleRequest = async (input:string) => {
     setLoading(true);
     setError("");
 
@@ -78,7 +78,7 @@ export default function LangflowPage() {
       const response = await fetch("/api/langflow", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ inputValue }),
+        body: JSON.stringify({ inputValue :input }),
       });
 
       if (!response.ok) {
@@ -151,7 +151,7 @@ export default function LangflowPage() {
             value={inputValue}
             onChange={(e) => {
               setInputValue(e.target.value)
-              handleRequest()
+              handleRequest(e.target.value)
             }}
             className="w-full p-3 border rounded-lg"
           >
